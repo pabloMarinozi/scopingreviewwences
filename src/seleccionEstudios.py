@@ -38,6 +38,9 @@ def mostrarPantallaSeleccionEstudios(user):
             with open('inclusion', 'w') as fp:
                 json.dump(paper.to_json(), fp)
         if paper is not None:
+            if paper.on_revision is not None: st.success("Este paper fue recuperado de una sesión incompleta anterior.")   
+            paper.on_revision = user
+            paper.save()
             st.write("Lea el título y abstract del siguiente artículo y marque si cumple alguna de las siguientes condiciones.")
             if paper.title is not None:
                 st.markdown("#### Título")
@@ -49,6 +52,8 @@ def mostrarPantallaSeleccionEstudios(user):
                 st.markdown("#### Doi")
                 st.markdown("["+paper.doi+"](https://doi.org/"+paper.doi+")")
             if st.button("Cambiar paper"):
+                del paper.on_revision
+                paper.save()
                 os.remove("inclusion")
             st.markdown("#### Criterios")
             col1, col2 = st.beta_columns(2)
@@ -65,6 +70,7 @@ def mostrarPantallaSeleccionEstudios(user):
                 ce5 = st.checkbox("5.  La publicación del estudio NO se sometió a un proceso de revisión por pares.")
             guardar = st.button("Guardar")
             if guardar:
+                del paper.on_revision
                 if ci1 or ci2 or ce1 or ce2 or ce3 or ce4 or ce5:
                     criteria =[]
                     if ci1 : criteria.append("CI1")
@@ -104,7 +110,14 @@ def mostrarPantallaSeleccionEstudios(user):
 
 #@st.cache(allow_output_mutation=True)                    
 def elegirPaper(user):
-    papers = list(Paper.objects(Q(inclusion2__exists=False) | Q(user_inclusion1__ne=user) ))
+    papers = list(Paper.objects(on_revision=user))
+    if papers:
+        paper = random.choice(papers)
+        paper = random.choice(papers)
+        if paper.inclusion1 is None: number = 1
+        else: number=2
+        return paper,number
+    papers = list(Paper.objects(Q(inclusion2__exists=False) & Q(user_inclusion1__ne=user) & Q(on_revision__exists=False)))
     if papers:
         paper = random.choice(papers)
         if paper.inclusion1 is None: number = 1
@@ -129,7 +142,7 @@ def mostrarAvance(users_distribution):
         if paper.inclusion2 is not None:
             revisions[paper.user_inclusion2] += 1
             cantidadRevisados += 1
-    progress = cantidadRevisados*100/cantidadRevisiones
+    progress = cantidadRevisados/cantidadRevisiones
     finish = st.progress(progress)
     st.write("Progreso: "+str(cantidadRevisados)+"/"+str(cantidadRevisiones)+"="+str(round(progress,2))+"%")
     if users_distribution:

@@ -58,6 +58,7 @@ class Paper(Document):
     title = StringField(required=True)
     abstract = StringField(required=True)
     doi = StringField(required=True, primary_key=True)
+    on_revision = StringField()
     inclusion1 = BooleanField()
     user_inclusion1 = StringField()
     criteria_inclusion1 = ListField(StringField())
