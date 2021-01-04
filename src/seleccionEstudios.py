@@ -38,7 +38,12 @@ def mostrarPantallaSeleccionEstudios(user):
             with open('inclusion', 'w') as fp:
                 json.dump(paper.to_json(), fp)
         if paper is not None:
-            if paper.on_revision is not None: st.success("Este paper fue recuperado de una sesión incompleta anterior.")   
+            show_warning = False
+            if paper.on_revision is not None: st.success("Este paper fue recuperado de una sesión incompleta anterior.") 
+            else:
+                show_warning = True
+                paper.on_revision = user
+                paper.save()
             st.write("Lea el título y abstract del siguiente artículo y marque si cumple alguna de las siguientes condiciones.")
             if paper.title is not None:
                 st.markdown("#### Título")
@@ -67,11 +72,9 @@ def mostrarPantallaSeleccionEstudios(user):
                 ce4 = st.checkbox("4.  El estudio NO está escrito en Inglés.")
                 ce5 = st.checkbox("5.  La publicación del estudio NO se sometió a un proceso de revisión por pares.")
             guardar = st.button("Guardar")
-            if paper.on_revision is None:
+            if show_warning:
                 st.warning("El paper a revisar ha cambiado. \n"+  "Desplácese hacia arriba para analizar su contenido. \n"+ 
                            "Asegúrese de no presionar el botón 'Guardar' hasta modificar los checkboxes de acuerdo a su revisión.")
-                paper.on_revision = user
-                paper.save()
             if guardar:
                 del paper.on_revision
                 if ci1 or ci2 or ce1 or ce2 or ce3 or ce4 or ce5:
