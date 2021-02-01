@@ -151,13 +151,13 @@ def mostrarAvance(users_distribution):
             cantidadRevisados += 1
     progress = cantidadRevisados/cantidadRevisiones
     finish = st.progress(progress)
-    st.write("Progreso: "+str(cantidadRevisados)+"/"+str(cantidadRevisiones)+"="+str(round(progress,2))+"%")
+    st.write("Progreso: "+str(cantidadRevisados)+"/"+str(cantidadRevisiones)+"="+str(round(progress*100,2))+"%")
     if users_distribution:
         st.set_option('deprecation.showPyplotGlobalUse', False)
         y = np.arange(len(users))
         plt.barh(y,width=list(revisions.values()))
         plt.yticks(y,list(revisions.keys()))
-        plt.xticks(range(max(list(revisions.values()))+1))
+        plt.xticks(list(revisions.values()))
         st.pyplot(plt.show())
     
     
