@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import opciones as op
@@ -7,14 +6,12 @@ import os.path
 import json
 from shutil import copyfile
 from exceptions import InputError
-from mongoengine import disconnect,connect
+from datosConexion import conectarBd
 from clases import Paper,Visual_Task,Visual_Feature
 
 
 def mostrarSeccionExtracción(user):
-    disconnect()
-    connect('scopingReview',host="mongodb+srv://admin:LccNwXd87QkFzvu@cluster0.w9zqf.mongodb.net/scopingReview?retryWrites=true&w=majority", alias='default')
-    st.title('Extracción de Datos')
+    conectarBd()
     
     col1, col2 = st.beta_columns(2)
     opciones = buscarOpcionesCargadas()
@@ -33,23 +30,32 @@ def mostrarSeccionExtracción(user):
                 os.remove("paper_selected")
         else:
             st.markdown("## Seleccionar artículo  para extraer datos.")
-            doi = st.text_input(label="Ingrese el doi del artículo en su formato url. Por ejemplo:https://doi.org/10.1109/CVPR.2016.609")
+            doi = st.text_input(label="Ingrese el doi del artículo en su formato url. Por ejemplo: doi.org/10.1109/CVPR.2016.609")
             if st.button(label="Buscar"):
                 paper = None
                 try:
                     badflag=False
                     paper = Paper.objects.get(doi=doi)
                     st.success("Se encontró un paper con título:\n"+'**"'+paper.title+'"**')
-                    if paper.research_goal is not None or \
-                    paper.practical_contibution is not None or \
-                    paper.viticultural_aspects is not None:
-                        st.error("El paper encontrado tiene cargadas las características de la investigación")
+                    goals = paper.research_goal
+                    if goals: 
+                        st.error("El paper encontrado tiene cargadas el objetivo de la investigación")
                         st.write("Objetivo de la investigación: ")
-                        st.write(paper.research_goal)
+                        for goal in goals:
+                            st.write(paper.research_goal)
+                        badflag = True
+                   
+                    if paper.practical_contibution is not None :
+                        st.error("El paper encontrado tiene cargadas Aportes Prácticos de la investigación")
                         st.write("Aporte práctico: "+ paper.practical_contibution)
+                        badflag = True
+                    
+                    if paper.viticultural_aspects is not None:
+                        st.error("El paper encontrado tiene cargadas Aspectos Vitícolas de la investigación")
                         st.write("Aspectos Vitícolas: " + paper.viticultural_aspects)
                         badflag = True
-                    if paper.visual_tasks is not None:
+                    tasks= paper.visual_tasks
+                    if tasks:
                         st.error("El paper encontrado tiene cargadas las tareas visuales")
                         visual_to_show = []
                         for task in paper.visual_tasks:
@@ -57,10 +63,12 @@ def mostrarSeccionExtracción(user):
                         st.write(visual_to_show)
                         badflag=True
                     if not badflag:
+                        st.success("El paper seleccionado esta en condiciones para llevar adelante la carga\n")
                         with open('paper_selected', 'w') as fp:
                             json.dump(paper.to_json(), fp)
                         st.write("Continue con la extracción y los datos ingresados se asociarán a este paper.")
                         st.json(paper.to_json())
+                    else: st.error("El paper seleccionado NO esta en condiciones para llevar adelante la carga. Contactese con el administrador de su Base de Datos.\n")
                 except Paper.MultipleObjectsReturned:
                     st.write("Al parecer, hay más de un paper con el doi ingresado.")
                     papers = Paper.objects(doi=doi)
@@ -70,7 +78,7 @@ def mostrarSeccionExtracción(user):
                     name = st.selectbox(label="Elija el que usted quiera analizar", options=names)
                     paper = Paper.objects(doi=doi, names=name)[0]
                 except Paper.DoesNotExist:
-                    st.error("No existe ningun paper con el doi ingresado en la base de datos")
+                    st.error("No existe ningun paper con el doi ingresado en la base de datos.")
     
     if seccion == "Tareas visuales":
         if os.path.exists("tareas_def"):
@@ -98,19 +106,20 @@ def mostrarSeccionExtracción(user):
                 if task == "Otra":
                     task = st.text_input(label="Ingrese una tarea visual para agregar a la base de datos.")
                 sub = st.radio("Subsecciones", ["Información Vitícola","Dataset","Features", "Algoritmos"])
-                if st.button("Cargar tarea visual"):
+                if st.button("1) Agregar tarea visual a la lista"):
                     cargarTarea(task)
-                if st.button("Eliminar tareas visuales cargadas"):
-                        os.remove("tareas")
-                        st.success("¡Se han eliminado las tareas visuales cargadas hasta el momento! ")
-                if st.button("Guardar tareas cargadas"):
+                mostrarTareas()
+                if st.button("2) Guardar lista de tareas"):
                     copyfile("tareas", "tareas_def")
+                    time.sleep(1)
                     st.success("¡Se han guardado los datos de esta sección! ")
                     with open('tareas_def', 'r') as fp:
                         tasks = json.load(fp)
                     st.json(tasks.to_json())
                     st.write("Seguí completando los campos de otras secciones o presioná 'Enviar' en la barra lateral si ya completaste todas las secciones.")
-                     
+                if st.button("Eliminar tareas visuales cargadas"):
+                        os.remove("tareas")
+                        st.success("¡Se han eliminado las tareas visuales cargadas hasta el momento! ")  
                     
     
             with col2: 
@@ -184,16 +193,64 @@ def mostrarSeccionExtracción(user):
                             condition = st.selectbox(label="Seleccione las condiciones en que se capturó el dataset. Si la que se quiere ingresar no se encuentra en la lista elija 'Otra' y carguela manualmente",options=options)
                             if condition == "Otra":
                                 condition = st.text_input(label="Ingrese una condición de captura nueva para agregar a la base de datos.")
-                                
+                            
+                            options = list(opciones["varietal_list"])
+                            options.append("Otros")
+                            # varietal = st.st.multiselect(label="Seleccione el/los varietales correspondientes observados en el dataset. Si ninguna de las opciones lo satisface, elija 'Otra' y carguela manualmente",options=options)   
+                            # if varietal == "Otra":
+                            #     varietal = st.text_input(label="Ingrese una condición de captura nueva para agregar a la base de datos.")
+                            varietales = st.multiselect(label="Seleccione el/los varietales correspondientes observados en el dataset. Si ninguna de las opciones lo satisface, elija 'Otra' y carguela manualmente",options=options)
+                            if "Otros" in varietales:
+                                varietales2 = st.text_input(label="Ingrese varietales para agregar a la base de datos, separados por comas")
+                            
+                            options = list(opciones["irrigation_conduction_list"])
+                            options.append("Otros")
+                            # irrigation = st.multiselect(label="Seleccione el/los sistemas de conducción observados en el dataset. Si ninguna de las opciones lo satisface, elija 'Otra' y carguela manualmente",options=options)   
+                            # if irrigation == "Otra":
+                            #     irrigation = st.text_input(label="Ingrese una condición de captura nueva para agregar a la base de datos.")
+                            irrigations = st.multiselect(label="Seleccione el/los sistemas de conducción observados en el dataset. Si ninguna de las opciones lo satisface, elija 'Otra' y carguela manualmente",options=options)
+                            if "Otros" in irrigations:
+                                irrigations2 = st.text_input(label="Ingrese sistemas de conducción para agregar a la base de datos, separados por comas")
+
+
                             dataset_details = st.text_area(label="Ingrese algun comentario destacable sobre la captura del dataset en caso de ser necesario.")                   
                         link = st.checkbox("¿Se encuentra disponible?")
                         if link:
                             link = st.text_input(label="Ingrese la url para acceder al dataset.")
                         if st.button("Guardar"):
-                            if bench:
-                                cargarDataset(bench,link)
+                            if bench:                         #objs=varietales #vars=irrigations
+                                #cargarDataset(bench,link)
+                                if "Otros" in irrigations:
+                                    if "Otros" in varietales:
+                                        cargarDataset(bench,link,varietales,irrigations,varietales2=varietales2.split(','),irrigations2=irrigations2.split(','))
+                                        #cargarInfoViticola(objs,vars,var_details,monitor,varietales2.split(','),irrigations2.split(','))
+                                    else:
+                                        cargarDataset(bench,link,varietales,irrigations,irrigations2=irrigations2.split(','))
+                                        #cargarInfoViticola(objs,vars,var_details,monitor,irrigations2=irrigations2.split(','))
+                                else:
+                                    if "Otros" in varietales:
+                                        cargarDataset(bench,link,varietales,irrigations,varietales2=varietales2.split(','))
+                                        #cargarInfoViticola(objs,vars,var_details,monitor,varietales2.split(','))
+                                    else:
+                                        cargarDataset(bench,link,varietales,irrigations)
+                                        #cargarInfoViticola(objs,vars,var_details,monitor)
+
                             else:
-                                cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                #cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                if "Otros" in irrigations:
+                                    if "Otros" in varietales:
+                                        cargarDataset(bench,link,varietales,irrigations,format,electromagnetic,camera,camera_details,condition,dataset_details,varietales2=varietales2.split(','),irrigations2=irrigations2.split(','))
+                                        #cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                    else:
+                                        cargarDataset(bench,link,varietales,irrigations,format,electromagnetic,camera,camera_details,condition,dataset_details,irrigations2=irrigations2.split(','))
+                                        #cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                else:
+                                    if "Otros" in varietales:
+                                        cargarDataset(bench,link,varietales,irrigations,format,electromagnetic,camera,camera_details,condition,dataset_details,varietales2=varietales2.split(','))
+                                        #cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                    else:
+                                        cargarDataset(bench,link,varietales,irrigations,format,electromagnetic,camera,camera_details,condition,dataset_details)
+                                        #cargarDataset(bench,link,format,electromagnetic,camera,camera_details,condition,dataset_details)
                         
                 if sub == "Features":
                     if os.path.exists("features_def"):
@@ -219,7 +276,7 @@ def mostrarSeccionExtracción(user):
                             features_hand = st.multiselect(label="Seleccione todas las handcrafted features utilizadas para esta tarea visual de alto nivel. Si alguna feature de este estilo no se encuentra en la lista elija 'Otras' y carguelas manualmente",options=options)
                             if "Otras" in features_hand:
                                 features_hand2 = st.text_input(label="Ingrese handcrafted features para agregar a la base de datos **separadas por comas**")
-                            if st.button("Cargar Handcrafted Features"):
+                            if st.button("1) Agregar Handcrafted Features a la lista"):
                                 if "Otras" in features_hand:
                                     cargarFeatures("Handcrafted",features_hand,features_hand2)
                                 else: cargarFeatures("Handcrafted",features_hand)
@@ -229,7 +286,7 @@ def mostrarSeccionExtracción(user):
                             features_lat = st.multiselect(label="Seleccione todas las latent features utilizadas para esta tarea visual de alto nivel. Si alguna feature de este estilo no se encuentra en la lista elija 'Otras' y carguelas manualmente",options=options)
                             if "Otras" in features_lat:
                                 features_lat2 = st.text_input(label="Ingrese latent features para agregar a la base de datos **separadas por comas**")
-                            if st.button("Cargar Latent Features"):
+                            if st.button("1) Agregar Latent Features a la lista"):
                                 if "Otras" in features_lat:
                                     cargarFeatures("Latent",features_lat,features_lat2)
                                 else: cargarFeatures("Latent",features_lat)
@@ -239,20 +296,21 @@ def mostrarSeccionExtracción(user):
                             features_deep = st.multiselect(label="Seleccione todas las deep features utilizadas para esta tarea visual de alto nivel. Si alguna feature de este estilo no se encuentra en la lista elija 'Otras' y carguelas manualmente",options=options)
                             if "Otras" in features_deep:
                                 features_deep2 = st.text_input(label="Ingrese latent features para agregar a la base de datos separadas por comas")
-                            if st.button("Cargar Deep Features"):
+                            if st.button("1) Agregar Deep Features a la lista"):
                                 if "Otras" in features_deep:
                                     cargarFeatures("Deep",features_deep,features_deep2)
                                 else: cargarFeatures("Deep",features_deep)
-                        if st.button("Eliminar afiliaciones cargadas"):
-                            os.remove("features")
-                            st.success("¡Se han eliminado las afiliaciones cargadas hasta el momento! ")
-                        if st.button("Guardar"):
+                        
+                        if st.button("2) Guardar lista completa"):
                             copyfile("features", "features_def")
                             st.success("¡Se han guardado los datos de esta sección! ")
                             data = pd.read_csv('features_def')
                             st.dataframe(data)
                             st.write("Seguí completando los campos de otras secciones o presioná 'Enviar' en la barra lateral si ya completaste todas las secciones.")
                         
+                        if st.button("Eliminar afiliaciones cargadas"):
+                            os.remove("features")
+                            st.success("¡Se han eliminado las afiliaciones cargadas hasta el momento! ")
                 
                 if sub == "Algoritmos":
                     if os.path.exists("algorithms"):
@@ -317,7 +375,7 @@ def cargarInfoViticola(objs,vars,var_details,monitor,objs2=[],vars2=[]):
     if objs2:
         objs.remove("Otros")
     if vars2:
-        vars.remove("Otros")
+        vars.remove("Otras")
     info = {"Objetos":list(set(objs+objs2)),"Variables":list(set(vars+vars2)),"Detalles":var_details,"Monitoreo":monitor}
     with open('viticulture', 'w') as fp:
         json.dump(info, fp)
@@ -325,9 +383,14 @@ def cargarInfoViticola(objs,vars,var_details,monitor,objs2=[],vars2=[]):
     st.json(info)
     st.write("Seguí completando los campos de otras secciones o presioná 'Enviar' en la barra lateral si ya completaste todas las secciones.")
 
-def cargarDataset(bench,link,format="",electromagnetic="",camera="",camera_details="",condition="",dataset_details=""):
+def cargarDataset(bench,link,varietales,irrigations,format="",electromagnetic="",camera="",camera_details="",condition="",dataset_details="",varietales2=[],irrigations2=[]):
+    if varietales2:
+        varietales.remove("Otros")
+    if irrigations2:
+        irrigations.remove("Otros")
     data = {"Benchmark":bench, "Link": link,"Formato":format, "Espectro": electromagnetic, "Cámara": camera, "Detalles_Cámara": camera_details,
-            "Condiciones_Captura": condition, "Detalles_Dataset": dataset_details}
+            "Condiciones_Captura": condition, "Detalles_Dataset": dataset_details,
+            "Varietal":list(set(varietales+varietales2)),"Sistemas_De_Conducción":list(set(irrigations+irrigations2))}
     with open('dataset', 'w') as fp:
         json.dump(data, fp)
     st.success("¡Se han guardado los datos de esta sección! ")
@@ -435,6 +498,8 @@ def cargarTarea(task):
                 dataset_format=dataset["Formato"],camera_types=dataset["Cámara"],
                 camera_details=dataset["Detalles_Cámara"],
                 benchmarking_dataset=dataset["Benchmark"],
+                variety=dataset["Varietal"],
+                driving_systems=dataset["Sistemas_De_Conducción"],
                 dataset_link=link,visual_features=features_list,
                 algorithms=algorithms["Algoritmos"],
                 viticultural_variable=viticulture["Variables"],
@@ -450,8 +515,16 @@ def cargarTarea(task):
     with open('tareas', 'w') as fp:
         json.dump(tasks, fp)
     st.success("¡Se ha guardado la tarea "+task.name)
-    st.markdown("#### Tareas visuales cargadas hasta el momento")
-    st.json(tasks)
+    #st.markdown("#### Tareas visuales cargadas hasta el momento")
+    #st.json(tasks)
+
+def mostrarTareas():
+    if os.path.exists("tareas"):
+        with open('tareas', 'r') as fp:
+            tasks = json.load(fp)
+        st.markdown("#### Tareas visuales cargadas hasta el momento")
+        st.json(tasks)
+
 
 def guardarExtraccion():
     badflag=False
@@ -515,13 +588,14 @@ def buscarOpcionesCargadas():
             opciones["viticultural_objects_list"].update(task.viticultural_objects)
             opciones["algorithms_list"].update(task.algorithms)
             opciones["viticultural_variable_list"].update(task.viticultural_variable)
+            opciones["varietal_list"].update(task.variety)
+            opciones["irrigation_conduction_list"].update(task.driving_systems)
             for feature in task.visual_features:
                 if feature.type == "Handcrafted":
                     opciones["visual_features_handcrafted_list"].add(feature.name)
                 elif feature.type == "Latent":
                     opciones["visual_features_latent_list"].add(feature.name)
                 else: opciones["visual_features_deep_list"].add(feature.name)
-    
     return opciones
     
                 

@@ -4,7 +4,7 @@ opciones = {
     "users": {"Pablo Marinozi","Facundo Bromberg","Diego Sebastián Pérez","Carlos Ariel Díaz","Wenceslao Villegas","Juan Manuel López Correa"},
     "inclusion_criteria": ("El estudio utiliza algún proceso de extracción de información automatizado sobre imágenes de cualquier región del espectro electromagnético en alguna de sus etapas.",
                            "El estudio se enfoca en la medición de variables de interés vitícola indistintamente de la ubicación geográfica y el sistema de conducción de los viñedos y del varietal y propósito de comercialización de las uvas."),
-    "exclusion_criteria": ("El estudio utiliza como entrada imágenes en las que la resolución de un pixel es mayor a un metro.",
+    "exclusion_criteria": ("El estudio utiliza como entrada imágenes satelitales.",
                             "El algoritmo opera sobre información electromagnética que no viene en forma de imagen (entiéndase representación visual bidimensional a partir de una matriz numérica) ",
                             "El paper está orientado a automatismo de la gestión, no a medición de variables.",
                             "El estudio no está escrito en Inglés.",

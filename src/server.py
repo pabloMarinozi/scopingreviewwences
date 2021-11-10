@@ -13,9 +13,10 @@ import clases,curacionBibliografica,extraccionDeDatos,opciones,exceptions
 from PIL import Image
 import opciones as op
 from seleccionEstudios import mostrarPantallaSeleccionEstudios
-from curacionBibliografica import mostrarPantallaCuracionBibliografica
+from curacionBibliografica import automatizarCarga, mostrarPantallaCuracionBibliografica
 from extraccionDeDatos import mostrarSeccionExtracción
 from cargaInicial import mostrarSeccionCarga
+from obtenerCitaciones import obtenerCitaciones
 
 #preprocesamiento
 # if os.path.exists("affiliations"): os.remove("affiliations")
@@ -46,7 +47,7 @@ else:
         f.write(user)
         f.close()
         
-pantalla = st.sidebar.selectbox(label="Tipo de extracción", options=["Seleccionar...","Selección de Estudios",'Datos Bibliográficos',"Contenido del Paper","Carga de búsqueda primaria"])
+pantalla = st.sidebar.selectbox(label="Tipo de extracción", options=["Seleccionar...","Selección de Estudios",'Datos Bibliográficos',"Contenido del Paper","Carga de Búsqueda Primaria", "Obtener Citaciones"])
 
 
         
@@ -60,13 +61,16 @@ if pantalla == "Seleccionar...":
         st.image(image)
             
 if pantalla == 'Datos Bibliográficos':
-    mostrarPantallaCuracionBibliografica(user)
+    mostrarPantallaCuracionBibliografica()
 if pantalla == "Selección de Estudios":
     mostrarPantallaSeleccionEstudios(user)
 if pantalla == "Contenido del Paper":
     mostrarSeccionExtracción(user)
-if pantalla == "Carga de búsqueda primaria":
+if pantalla == "Carga de Búsqueda Primaria":
     mostrarSeccionCarga()
+if pantalla == "Obtener Citaciones":
+    obtenerCitaciones()
+
 
 
 
