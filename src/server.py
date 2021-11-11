@@ -9,15 +9,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os.path
-import clases,curacionBibliografica,extraccionDeDatos,opciones,exceptions
 from PIL import Image
-import opciones as op
 from seleccionEstudios import mostrarPantallaSeleccionEstudios
 from curacionBibliografica import automatizarCarga, mostrarPantallaCuracionBibliografica
 from extraccionDeDatos import mostrarSeccionExtracción
 from cargaInicial import mostrarSeccionCarga
 from obtenerCitaciones import obtenerCitaciones
-
+from users import verificarUsuario
 #preprocesamiento
 # if os.path.exists("affiliations"): os.remove("affiliations")
 # if os.path.exists("features"): os.remove("features")
@@ -28,24 +26,7 @@ from obtenerCitaciones import obtenerCitaciones
 
 st.title('Computer Vision in Precission Viticulture: a Scoping Review')
 # with col2:
-if os.path.exists("user_selected"):
-    user = f = open("user_selected", "r").read()
-    st.sidebar.write("Usuario: "+user)
-    if st.sidebar.button("Cambiar Usuario"):
-        os.remove("user_selected")
-else:
-    st.markdown("#### Usuario")
-    opciones = op.opciones.copy()
-    options = list(opciones["users"])
-    options.append("Otro")
-    options = ["Seleccionar..."] + options
-    user = st.selectbox(label="Seleccione su nombre de entre la lista de usuarios. Si usted no se encuentra en la lista elija 'Otro' y carguelo manualmente por única vez.",options=options)
-    if user == "Otro":
-        user = st.text_input(label="Ingrese un usuario para agregar a la base de datos.")
-    if st.button("Guardar Usuario"):
-        f = open("user_selected", "w")
-        f.write(user)
-        f.close()
+user = verificarUsuario()
         
 pantalla = st.sidebar.selectbox(label="Tipo de extracción", options=["Seleccionar...","Selección de Estudios",'Datos Bibliográficos',"Contenido del Paper","Carga de Búsqueda Primaria", "Obtener Citaciones"])
 
